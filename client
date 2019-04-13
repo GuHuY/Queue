@@ -1,0 +1,465 @@
+import tkinter as tk
+from tkinter import messagebox
+import time as T
+import client
+
+text_frame_top = ("Individual assessment items must be solely your own work. "
+                  "While students are encouraged to have high-level "
+                  "conversations about the problem they are trying to solve, "
+                  "you must not to look at another student's code or copy "
+                  "from it. The university uses sophisticated anti-collusion "
+                  "measures to automatically detect similarity between "
+                  "assignment submission.")
+text_frame_L2 = ("Some examples of quick questions:\n"
+                 "    • Syntax errors\n"
+                 "    • Interpreting error output\n"
+                 "    • Assignment/MyPyTutor interpretation\n"
+                 "    • MyPyTutor submission issues\n")
+text_frame_R2 = ("Some examples of quick questions:\n"
+                 "    • Open ended questions\n"
+                 "    • How to start a problem\n"
+                 "    • How to improve code\n"
+                 "    • Debugging\n"
+                 "    • Assignment help\n")
+Help_Queue = []  # Store the data that going to be shown in the GUI
+
+
+class App(object):
+    """
+    Queueing application.
+    """
+    def __init__(self, master):
+        """
+        Construct a queueing application  a pickup pile and list of players.
+
+        Parameters:
+            master(tkinter.Tk): The tk root object
+        """
+        self._master = master
+        self._master.title("Example 9")
+        self._master.geometry("1000x800")
+
+        # The explanatory bar on the top
+        self._frame_top = tk.Frame(self._master, bg="#FEFCEC", height=70)
+        self._frame_top.pack_propagate(0)
+        self._frame_top.pack(fill=tk.X, ipady=20)
+        tk.Label(self._frame_top,
+                 text="Important",
+                 bg="#FEFCEC",
+                 font=('Arial', 15, "bold"),
+                 fg="#C59943").pack(anchor=tk.W, padx=10, fill=tk.Y)
+        tk.Label(self._frame_top,
+                 text=text_frame_top,
+                 wraplength=960,
+                 justify='left',
+                 bg="#FEFCEC").pack(anchor=tk.W, padx=10, fill=tk.Y)
+
+        # The overall "Quick Questions"&"Long Questions" parts on the bottom
+        self._frame_botton = tk.Frame(self._master, bg="white")
+        self._frame_botton.pack(fill=tk.BOTH, expand=1, anchor=tk.N)
+        self._frame_L = tk.Frame(self._frame_botton, bg='white')
+        self._frame_L.pack(fill=tk.BOTH, expand=1, anchor=tk.N, padx=10,
+                           pady=10, side=tk.LEFT)
+        self._frame_R = tk.Frame(self._frame_botton, bg='white')
+        self._frame_R.pack(fill=tk.BOTH, expand=1, anchor=tk.N, padx=10,
+                           pady=10, side=tk.LEFT)
+
+        # The header of "Quick Questions"
+        self._frame_L1 = tk.Frame(self._frame_L, bg='#DBF3D6', height=130)
+        self._frame_L1.pack_propagate(0)
+        self._frame_L1.pack(fill=tk.X)
+        tk.Label(self._frame_L1,
+                 text="Quick Questions",
+                 bg="#DBF3D6",
+                 fg="#1F7B38",
+                 font=('Arial', 30, "bold")).pack(fill=tk.Y, pady=20)
+        tk.Label(self._frame_L1,
+                 text="< 2 mins with a tutor",
+                 fg="#706567",
+                 bg="#DBF3D6").pack(fill=tk.Y, side=tk.BOTTOM)
+
+        # The header of "Long Questions"
+        self._frame_R1 = tk.Frame(self._frame_R, bg='#D5EDF9', height=130)
+        self._frame_R1.pack_propagate(0)
+        self._frame_R1.pack(fill=tk.BOTH)
+        tk.Label(self._frame_R1,
+                 text="Long Questions",
+                 bg="#D5EDF9",
+                 fg="#186F93",
+                 font=('Arial', 30, "bold")).pack(fill=tk.Y, pady=20)
+        tk.Label(self._frame_R1,
+                 text="> 2 mins with a tutor",
+                 fg="#706567",
+                 bg="#D5EDF9").pack(fill=tk.Y, side=tk.BOTTOM)
+
+        # The examples and button of "Quick Questions"
+        self._frame_L2 = tk.Frame(self._frame_L, bg='white', height=200)
+        self._frame_L2.pack_propagate(0)
+        self._frame_L2.pack(fill=tk.BOTH)
+        tk.Label(self._frame_L2, text=text_frame_L2, justify='left',
+                 bg="white").pack(anchor=tk.W, pady=20)
+        self._button_quick = tk.Button(self._frame_L2,
+                                       bg="#94D49E",
+                                       text="Request Quick Help",
+                                       fg="white",
+                                       command=self.press_quick)
+        self._button_quick.pack(side=tk.BOTTOM)
+
+        # The examples and button of "Long Questions"
+        self._frame_R2 = tk.Frame(self._frame_R, bg='white', height=220)
+        self._frame_R2.pack_propagate(0)
+        self._frame_R2.pack(fill=tk.BOTH)
+        tk.Label(self._frame_R2, text=text_frame_R2, justify='left',
+                 bg="white").pack(anchor=tk.W, pady=20)
+        self._button_quick = tk.Button(self._frame_R2,
+                                       bg="#96D4E5",
+                                       text="Request Long Help",
+                                       fg="white",
+                                       command=self.press_long)
+        self._button_quick.pack(side=tk.BOTTOM)
+
+        # The frames of two queue parts
+        self._frame_L3 = tk.Frame(self._frame_L, height=300)
+        self._frame_L3.pack_propagate(0)
+        self._frame_L3.pack(fill=tk.BOTH)
+        self._frame_R3 = tk.Frame(self._frame_R, height=300)
+        self._frame_R3.pack_propagate(0)
+        self._frame_R3.pack(fill=tk.BOTH)
+
+        # Start resfreash
+        self.auto_refresh()
+
+    def draw_line(self, master):
+        """
+        Draw gray line in specific area.
+
+        Parameters:
+            master(tkinter.Frame): the container of the line
+        """
+        tk.Canvas(master, height=2, bg="#EEEEEE").pack(fill=tk.X)
+
+    def press_quick(self):
+        """Creat a dialog box after click 'Request Quick Help' btn."""
+        Dialog_Enter_Name(self._master, "quick")
+
+    def press_long(self):
+        """Creat a dialog box after click 'Request Long Help' btn."""
+        Dialog_Enter_Name(self._master, "long")
+
+    def list_header(self, master):
+        """
+        Draw the header of specific queue.
+
+        Parameters:
+            master(tkinter.Frame): the container of the header.
+        """
+        Form_Format = "#"+"  "+"Name"+"\t\t"+"Questions Asked"+"\t"+"Time"
+        tk.Label(master,
+                 text=Form_Format,
+                 bg="white").pack(anchor=tk.W)
+
+    def show_queue_list(self, master, queue_type):
+        """
+        Sort the 'Help_Queue' list then draw the queue in spcific frame
+        from Help_Queue.
+
+        Parameters:
+            master(tkinter.Frame): the container of the queue.
+            queue_type(int): 0 indicate 'quick question', 1 indicate
+                             'long question'.
+        """
+        index = 0
+        global Help_Queue
+        # Sort the list by: 'question type', 'asked questions number',
+        #                   'time when requestion submitted'
+        Help_Queue = list(sorted(Help_Queue, key=lambda x: (x[0], x[2], x[3])))
+        if Help_Queue:
+            for n in range(len(Help_Queue)):
+                # Help_Queue[n][0] is the 'question type' of NO.n student
+                if Help_Queue[n][0] == queue_type:
+                    index += 1
+                    # Add_List_Item will add a frame in master when called
+                    Add_List_Item(master,
+                                  queue_type,
+                                  index,
+                                  Help_Queue[n][1],
+                                  Help_Queue[n][2],
+                                  time2text(int(T.time()) - Help_Queue[n][3]))
+
+    def average_wait_time(self, master, queue_type):
+        """
+        Create a text of average wait time for the specified queue
+
+        Parameters:
+            master(tkinter.Frame): the container of the queue.
+            queue_type(int): 0 indicate 'quick question', 1 indicate
+                             'long question'.
+        """
+        time_sum = 0  # Summation of submit time
+        stu_num = 0  # Number of students of specific question type
+        # Calculate the summation of submit time of specific question type
+        for temp_list in Help_Queue:
+            if temp_list[0] == queue_type:
+                stu_num += 1
+                time_sum += temp_list[3]
+        if stu_num:
+            # Calculate the average waiting time and transfer it to text
+            time_average = time2text(int(T.time() - time_sum / stu_num))
+            n_student = " for " + str(stu_num) + " student"
+            if stu_num > 1:
+                n_student += "s"
+            Average_Wait_Time_Text = ("An average wait time of " +
+                                      time_average +
+                                      n_student)
+        else:
+            Average_Wait_Time_Text = "No students in queue."
+        tk.Label(master, text=Average_Wait_Time_Text, justify='left',
+                 height=2, bg="white").pack(anchor=tk.W, pady=3)
+
+    def refresh_data(self):
+        """Recreat frame of queue part according to 'Help_Queue'."""
+
+        # Request data from web and store in 'Help_Queue'
+        global Help_Queue
+        web_list = client.get_HelpQueue_from_web()
+        if web_list:
+            Help_Queue = list(web_list)
+        else:
+            print('Fail to acquire data.')
+
+        # destroy before refresh
+        self._frame_L3.destroy()
+        self._frame_R3.destroy()
+
+        # Rebuilt the frames of two queue parts
+        self._frame_L3 = tk.Frame(self._frame_L, height=300)
+        self._frame_L3.pack_propagate(0)
+        self._frame_L3.pack(fill=tk.BOTH)
+        self._frame_R3 = tk.Frame(self._frame_R, height=300)
+        self._frame_R3.pack_propagate(0)
+        self._frame_R3.pack(fill=tk.BOTH)
+
+        # The average wait time of "Quick Questions"
+        self.draw_line(self._frame_L3)
+        self.average_wait_time(self._frame_L3, 0)
+        self.draw_line(self._frame_L3)
+
+        # The average wait time of "Long Questions"
+        self.draw_line(self._frame_R3)
+        self.average_wait_time(self._frame_R3, 1)
+        self.draw_line(self._frame_R3)
+
+        # Quick help waiting list
+        self._frame_left_queue = tk.Frame(self._frame_L3,
+                                          bg='white',
+                                          height=50)
+        self._frame_left_queue.pack(fill=tk.X)
+        self.list_header(self._frame_left_queue)
+        self.draw_line(self._frame_L3)
+        self.show_queue_list(self._frame_L3, 0)
+
+        # Long help waiting list
+        self._frame_right_queue = tk.Frame(self._frame_R3,
+                                           bg='white',
+                                           height=50)
+        self._frame_right_queue.pack(fill=tk.X)
+        self.list_header(self._frame_right_queue)
+        self.draw_line(self._frame_R3)
+        self.show_queue_list(self._frame_R3, 1)
+
+    def auto_refresh(self):
+        """Call function refresh_data() every 10s."""
+        self.refresh_data()
+        self._master.after(10000, self.auto_refresh)
+
+
+class Add_List_Item(object):
+    """
+    A frame contains: order, name, question asked, time and two btns.
+    """
+    def __init__(self, master, queue_type, order, name,
+                 questions_number, time):
+        """
+        Construct a frame.
+
+        Parameters:
+            master(tkinter.Frame): The container of this frame.
+            order(int): The order of each student in queue.
+            queue_type(int): The questions type of ecah student. 0 indicate
+                             'quick question', 1 indicate 'long question'.
+            name(str): The name of ecah student.
+            questions_number(int): The number of asked quesitons of each
+                                   student.
+            time(int): The waiting time of each student.
+        """
+        self._type = queue_type
+        self._name = name
+        self._new_frame = tk.Frame(master, height=20)
+        self._new_frame.pack_propagate(0)
+        self._new_frame.pack(fill=tk.X)
+
+        # Adjust the format for names with different length
+        if len(name) < 7:
+            name_text = str(name) + "\t\t"
+        elif len(name) < 14:
+            name_text = str(name) + "\t"
+        else:
+            name_text = str(name)[:14]+"...\t"
+        self.Form_Format = (str(order)+"  "+name_text +
+                            str(questions_number) + "\t\t"+str(time)+" ago")
+
+        # One Label and two buttons in each frame
+        tk.Label(self._new_frame, text=self.Form_Format,
+                 bg="white").pack(anchor=tk.W, side=tk.LEFT)
+        self._button_green = tk.Button(self._new_frame, bg="green",
+                                       command=self.press_green)
+        self._button_green.pack(anchor=tk.W, side=tk.RIGHT)
+        self._button_red = tk.Button(self._new_frame, bg="red",
+                                     command=self.press_red)
+        self._button_red.pack(anchor=tk.W, side=tk.RIGHT)
+
+    def press_red(self):
+        """
+        Send student's name and type to server, if connection fails
+        display a error messagebox.
+        """
+
+        # If connect to server
+        if client.delete_item(self._name, self._type, 0):
+            self.quick_remove_and_destroy()
+        else:
+            messagebox.showinfo(title='Connection Error',
+                                message='Failed to delete item in server')
+
+    def press_green(self):
+        """
+        Send student's name and type to server, if connection fails
+        display a error messagebox.
+        """
+
+        # If connect to server
+        if client.delete_item(self._name, self._type, 1):
+            self.quick_remove_and_destroy()
+        else:
+            messagebox.showinfo(title='Connection Error',
+                                message='Failed to delete item in server')
+
+    def quick_remove_and_destroy(self):
+        """
+        Remove current student from local 'Help_Queue' list and destroy
+        current frame.
+        """
+        for temp_list in Help_Queue:
+            if (self._name in temp_list) and (temp_list[0] == self._type):
+                Help_Queue.remove(temp_list)
+        self._new_frame.destroy()
+
+
+class Dialog_Enter_Name(object):
+    """
+    The dialog box that will be waked by 'request quick help' btn or
+    'request long help' btn
+    """
+    def __init__(self, master, queue_type):
+        """
+        Construct a dialog box.
+
+        Parameters:
+            master(tkinter.tk): The tk root object.
+            queue_type(int): 0 indicate 'quick question', 1 indicate
+                             'long question'.
+        """
+        self._type = queue_type
+        self._dialog_box = tk.Toplevel(master)
+        self._dialog_box.geometry('350x200')
+        if self._type == "quick":
+            self._dialog_box.title('Request Quick Help')
+            self._type = 0
+        else:
+            self._dialog_box.title('Request Long Help')
+            self._type = 1
+        btn_submit = tk.Button(self._dialog_box, text='Submit',
+                               command=self.submission)
+        self._name = tk.StringVar()
+        tk.Label(self._dialog_box, text='Name: ').place(x=10, y=10)
+        entry_name_text = tk.Entry(self._dialog_box, textvariable=self._name)
+        entry_name_text.place(x=150, y=10)
+        btn_submit.place(x=150, y=130)
+
+    def submission(self):
+        """
+        Add new item in 'Help_Queue' list if entered name is not empty or
+        already in the 'Help_Queue'.
+        """
+        if self._name.get():
+            if self.check_repetition():
+                messagebox.showinfo(title='Error',
+                                    message='Can not join the queue twice')
+            elif self.check_comma_and_semicolon():
+                messagebox.showinfo(title='Error',
+                                    message="No ',' or ';' in name")
+            else:
+                # if Adding new item web 'Help_Queue' list successfully
+                if client.add_item(self._name.get(), self._type):
+                    self._dialog_box.destroy()
+                    app.refresh_data()
+                else:
+                    messagebox.showinfo(title='Connection Error',
+                                        message='Failed to add item to server')
+        else:
+            messagebox.showinfo(title='Error',
+                                message='Please enter a name')
+
+    def check_repetition(self):
+        """
+        Check if entered name is already in the 'Help_Queue'.
+
+        Returns:
+            (bool): True when entered name is already in the 'Help_Queue'.
+        """
+        repetition = False
+        for temp_list in Help_Queue:
+            if self._name.get() in temp_list and temp_list[0] == self._type:
+                repetition = True
+                break
+        return repetition
+
+    def check_comma_and_semicolon(self):
+        """
+        Check if entered name is already in the 'Help_Queue'.
+
+        Returns:
+            (bool): True when entered name is already in the 'Help_Queue'.
+        """
+        comma_and_semicolon = False
+        for letter in self._name.get():
+            if letter == ',' or letter == ';':
+                comma_and_semicolon = True
+                break
+        return comma_and_semicolon
+
+
+def time2text(seconds):
+    """
+    Transfer time to text.
+
+    Parameters:
+        seconds(int): Time in seconds.
+
+    Returns:
+        (str): A sentence approximately describe the time.
+    """
+    if seconds < 60:
+        return "a few seconds"
+    if seconds < 60*2:
+        return "a minute"
+    if seconds < 3600:
+        return str(seconds//60) + " minutes"
+    if seconds < 3600*2:
+        return "1 hour"
+    return str(seconds//3600) + " hours"
+
+
+root = tk.Tk()
+app = App(root)
+root.mainloop()
