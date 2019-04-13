@@ -1,0 +1,69 @@
+import web
+import time as T
+
+Help_Queue = []
+Quesions_Track = {}
+
+
+urls = (
+    '/', 'show',
+    '/QT', 'QT',
+    '/add/(.*)', 'add',
+    '/delete_green/(.*)', 'delete_green',
+    '/delete_red/(.*)', 'delete_red'
+)
+
+
+class show:
+    def GET(self):
+        sum_str = ""
+        for temp_list in Help_Queue:
+            index = 0
+            for index in range(len(temp_list)):
+                sum_str += (str(temp_list[index]))
+                if index == len(temp_list)-1:
+                    sum_str += ';'
+                else:
+                    sum_str += ','
+        return sum_str
+
+
+class QT():
+    def GET(self):
+        return Quesions_Track
+
+
+class add:
+    def GET(self, name):
+        name = name.encode('utf-8')
+        if name[1:] not in Quesions_Track:
+                    Quesions_Track[name[1:]] = [0, 0]
+        Help_Queue.append([name[0],
+                           name[1:],
+                           Quesions_Track[name[1:]][int(name[0])],
+                           int(T.time())])
+        return Help_Queue, Quesions_Track
+
+
+class delete_green:
+    def GET(self, name):
+        name = name.encode('utf-8')
+        for temp_list in Help_Queue:
+            if (name[1:] in temp_list) and (temp_list[0] == name[0]):
+                Help_Queue.remove(temp_list)
+        Quesions_Track[name[1:]][int(name[0])] += 1
+        return Help_Queue, Quesions_Track
+
+
+class delete_red:
+    def GET(self, name):
+        name = name.encode('utf-8')
+        for temp_list in Help_Queue:
+            if (name[1:] in temp_list) and (temp_list[0] == name[0]):
+                Help_Queue.remove(temp_list)
+        return Help_Queue, Quesions_Track
+
+
+if __name__ == "__main__":
+    app = web.application(urls, globals())
+    app.run()
