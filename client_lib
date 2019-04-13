@@ -1,0 +1,57 @@
+from urllib import request
+url = "http://localhost:8080/"
+
+
+def Text2List(text, separator):
+    index = 0
+    text += separator
+    result_list = []
+    current_item = ''
+    while index < len(text):
+        if text[index] != separator:
+            current_item += text[index]
+        else:
+            if current_item != '':
+                result_list.append(current_item)
+            current_item = ''
+        index += 1
+    return result_list
+
+
+def ListItem2Int(list):
+    index = 0
+    for index in range(len(list)):
+        if index != 1:
+            list[index] = int(list[index])
+    return list
+
+
+def get_HelpQueue_from_web():
+    try:
+        feedback = request.urlopen(url)
+        feedback = str(feedback.read())[2:-1]
+        return [ListItem2Int(Text2List(x, ',')) for x in Text2List(feedback,
+                                                                   ';')]
+    except Exception:
+        return 0
+
+
+def add_item(name, question_type):
+    try:
+        request.urlopen(url+'add/'+str(question_type)+str(name))
+    except Exception:
+        return 0
+    else:
+        return 1
+
+
+def delete_item(name, question_type, button_type):
+    try:
+        if button_type:
+            request.urlopen(url+'delete_green/'+str(question_type)+str(name))
+        else:
+            request.urlopen(url+'delete_red/'+str(question_type)+str(name))
+    except Exception:
+        return 0
+    else:
+        return 1
